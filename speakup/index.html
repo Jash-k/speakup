@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f7f6f2">
+  <meta name="description" content="A friendly AI conversation partner for everyday English practice.">
+  <title>SpeakUp — English practice, one conversation at a time</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <svg class="icon-defs" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3.5M8.5 21.5h7"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="m21.5 2.5-7 19-4-8-8-4 19-7Z"/><path d="M10.5 13.5 21.5 2.5"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="m19.4 13.5 1.2.9-1.2 2.1-1.5-.5a7.7 7.7 0 0 1-1.5.9l-.3 1.6h-2.4l-.4-1.6a7.7 7.7 0 0 1-1.6-.1l-1 1.2-2.1-1.2.5-1.5a7.7 7.7 0 0 1-.9-1.5l-1.6-.3v-2.4l1.6-.4a7.7 7.7 0 0 1 .1-1.6L7 8.1l1.2-2.1 1.5.5a7.7 7.7 0 0 1 1.5-.9l.3-1.6h2.4l.4 1.6a7.7 7.7 0 0 1 1.6.1l1-1.2 2.1 1.2-.5 1.5a7.7 7.7 0 0 1 .9 1.5l1.6.3v2.4l-1.6.4a7.7 7.7 0 0 1-.1 1.6Z" transform="translate(-1.2 -0.5) scale(.96)"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5m6 6-6-6 6-6"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-volume" viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6l-5 4H4Z"/><path d="M17 9a5 5 0 0 1 0 6m2.5-8.5a8.5 8.5 0 0 1 0 11"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5v-16Z"/><path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20M8 7h8m-8 3h6"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 2 1.7 6.3L20 10l-6.3 1.7L12 18l-1.7-6.3L4 10l6.3-1.7L12 2Z"/><path d="m19 16 .8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16Z"/></symbol>
+  </svg>
+
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#home" id="brandHome" aria-label="SpeakUp home">
+        <span class="brand-mark"><svg><use href="#i-mic"/></svg></span>
+        <span class="brand-name">Speak<span>Up</span></span>
+        <span class="brand-tag">ENGLISH PRACTICE</span>
+      </a>
+      <nav class="top-actions" aria-label="Main navigation">
+        <button class="top-action" id="historyOpen" type="button" title="Practice history">
+          <svg><use href="#i-clock"/></svg><span>History</span>
+        </button>
+        <button class="top-action" id="wordsOpen" type="button" title="My tricky words">
+          <svg><use href="#i-book"/></svg><span>My words</span><span id="wordCount" class="tiny-count hidden">0</span>
+        </button>
+        <button class="icon-button settings-button" id="settingsOpen" type="button" title="Settings" aria-label="Open settings">
+          <svg><use href="#i-settings"/></svg>
+        </button>
+      </nav>
+    </header>
+
+    <main id="appMain">
+      <section id="homeScreen" class="screen home-screen" aria-labelledby="welcomeTitle">
+        <div class="home-layout">
+          <section class="welcome-card">
+            <div class="welcome-content">
+              <div class="eyebrow"><span class="eyebrow-dot"></span> YOUR DAILY SPEAKING SPACE</div>
+              <h1 id="welcomeTitle">Speak a little.<br><span>Grow a lot.</span></h1>
+              <p class="welcome-copy">A friendly AI partner for the conversations you have in real life. Practise at your pace, and get a helpful correction after every turn.</p>
+              <button id="quickStart" class="button button-light" type="button">
+                <span>Start a quick chat</span><svg><use href="#i-arrow"/></svg>
+              </button>
+              <div class="welcome-note"><span class="mini-spark">✦</span> No pressure. Just progress.</div>
+            </div>
+            <div class="welcome-art" aria-hidden="true">
+              <div class="art-orbit orbit-a"></div><div class="art-orbit orbit-b"></div>
+              <div class="art-sun"></div>
+              <div class="art-speech speech-one">You’ve got this <span>✦</span></div>
+              <div class="art-speech speech-two">Let’s talk!</div>
+              <div class="art-person"><div class="person-hair"></div><div class="person-face"></div><div class="person-body"></div><div class="person-neck"></div></div>
+              <div class="art-spark art-spark-one">✳</div><div class="art-spark art-spark-two">✦</div>
+            </div>
+          </section>
+
+          <section class="connect-callout" id="connectCallout" aria-live="polite">
+            <span class="connect-icon"><svg><use href="#i-spark"/></svg></span>
+            <div class="connect-copy">
+              <strong id="connectTitle">One quick setup to unlock your AI partner</strong>
+              <span id="connectDescription">Add your free Gemini API key in Settings. You can explore the practice modes now.</span>
+            </div>
+            <button id="connectHomeBtn" type="button" class="button button-soft"><span id="connectButtonLabel">Set up AI</span><svg><use href="#i-arrow"/></svg></button>
+          </section>
+
+          <section class="practice-section" aria-labelledby="practiceTitle">
+            <div class="section-heading">
+              <div><div class="eyebrow muted-eyebrow">PICK UP WHERE YOU ARE</div><h2 id="practiceTitle">What shall we practise?</h2></div>
+              <div class="home-stats" id="homeStats" aria-label="Practice stats"></div>
+            </div>
+
+            <div class="category-tabs" id="categoryTabs" role="tablist" aria-label="Practice categories"></div>
+            <div class="scenario-grid" id="scenarioGrid"></div>
+          </section>
+
+          <section class="practice-preferences" aria-label="Practice preferences">
+            <div class="preference-block level-block">
+              <div class="preference-heading"><span class="pref-icon pref-level">A</span><div><strong>Speaking level</strong><small>We’ll adjust the conversation to you</small></div></div>
+              <select id="homeLevel" class="select-control" aria-label="Choose your English level">
+                <option value="beginner">Beginner</option>
+                <option value="intermediate" selected>Intermediate</option>
+                <option value="advanced">Advanced</option>
+              </select>
+            </div>
+            <div class="preference-divider"></div>
+            <div class="preference-block pronunciation-block">
+              <div class="preference-heading"><span class="pref-icon pref-pron">◉</span><div><strong>Pronunciation feedback</strong><small>Approximate AI guidance from your audio</small></div></div>
+              <label class="switch-wrap" for="pronunciationHome"><span class="switch-label" id="pronHomeLabel">Off</span><input class="switch-input" id="pronunciationHome" type="checkbox"><span class="switch-visual" aria-hidden="true"></span></label>
+            </div>
+            <p class="preference-footnote" id="pronHomeNote">When on, voice recordings are sent with your turn to Gemini for feedback. Audio isn’t saved by SpeakUp.</p>
+          </section>
+
+          <footer class="home-footer"><span>Built for real conversations, not perfect answers.</span><span>🔒 Your practice notes stay in this browser.</span></footer>
+        </div>
+      </section>
+
+      <section id="sessionScreen" class="screen session-screen hidden" aria-label="Conversation practice">
+        <div class="session-heading">
+          <button class="back-link" id="backHome" type="button"><svg><use href="#i-back"/></svg><span>All practice</span></button>
+          <div class="session-heading-main">
+            <div class="session-category-pill" id="sessionCategoryPill"></div>
+            <h1 id="sessionTitle">Casual chat</h1>
+            <p id="sessionSubtitle">A relaxed conversation to build your confidence.</p>
+          </div>
+          <button class="button button-outline finish-button" id="finishSession" type="button">Finish session</button>
+        </div>
+
+        <div class="pronunciation-banner" id="pronunciationBanner">
+          <div class="pronunciation-banner-icon"><svg><use href="#i-mic"/></svg></div>
+          <div class="pronunciation-banner-copy"><strong>Pronunciation coach</strong><span id="pronSessionNote">Off · switch on to get voice feedback</span></div>
+          <label class="switch-wrap" for="pronunciationSession"><span class="switch-label" id="pronSessionLabel">Off</span><input class="switch-input" id="pronunciationSession" type="checkbox"><span class="switch-visual" aria-hidden="true"></span></label>
+        </div>
+
+        <div class="chat-card">
+          <div class="chat-toolbar"><div class="chat-online"><span class="online-dot"></span><span>Your conversation</span></div><div class="turn-counter" id="turnCounter">0 turns</div></div>
+          <div class="conversation" id="conversation" role="log" aria-live="polite" aria-relevant="additions text"></div>
+          <div class="typing-indicator hidden" id="typingIndicator" aria-live="polite"><span class="typing-avatar">S</span><span class="typing-dots"><i></i><i></i><i></i></span><span class="typing-label">Thinking of a helpful reply…</span></div>
+          <div class="recording-status hidden" id="recordingStatus" aria-live="assertive"><span class="recording-pulse"></span><span id="recordingText">Listening… tap the mic again when you’re done</span><span class="recording-timer" id="recordingTimer">0:00</span></div>
+          <form class="composer" id="messageForm">
+            <button class="mic-button" id="micButton" type="button" aria-label="Start speaking" title="Speak your reply"><svg><use href="#i-mic"/></svg><span class="mic-ripple"></span></button>
+            <label class="composer-field" for="messageInput"><span class="sr-only">Your reply</span><textarea id="messageInput" rows="1" placeholder="Type your reply, or tap the microphone…" maxlength="2500" autocomplete="off"></textarea><span class="composer-hint" id="composerHint">Enter to send · Shift + Enter for a new line</span></label>
+            <button class="send-button" id="sendButton" type="submit" aria-label="Send reply" title="Send reply"><svg><use href="#i-send"/></svg></button>
+          </form>
+          <div class="chat-caption"><span>Corrections are private and just for you.</span><span id="speechSupportNote"></span></div>
+        </div>
+        <div class="session-bottom-note"><svg><use href="#i-spark"/></svg><span>Try to answer in a full sentence. Mistakes are how we learn.</span></div>
+      </section>
+
+      <section id="summaryScreen" class="screen summary-screen hidden" aria-labelledby="summaryTitle">
+        <button id="summaryBack" class="back-link" type="button"><svg><use href="#i-back"/></svg><span>Back to practice</span></button>
+        <div class="summary-card">
+          <div class="summary-confetti" aria-hidden="true">✦　✳　✦</div>
+          <div class="summary-icon"><svg><use href="#i-spark"/></svg></div>
+          <div class="eyebrow muted-eyebrow">SESSION COMPLETE</div>
+          <h1 id="summaryTitle">You showed up. That counts.</h1>
+          <p class="summary-subtitle" id="summarySubtitle">Every conversation makes the next one easier.</p>
+          <div class="summary-metrics" id="summaryMetrics"></div>
+          <div class="summary-details" id="summaryDetails"></div>
+          <div class="summary-actions"><button id="againButton" class="button button-primary" type="button">Practise again <svg><use href="#i-arrow"/></svg></button><button id="summaryHome" class="button button-outline" type="button">Back to home</button></div>
+          <p class="summary-save-note">Your practice summary is saved only in this browser. You can clear it in Settings.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="app-footer"><span>SpeakUp <span class="footer-dot">•</span> Small steps, stronger conversations</span><button id="privacyOpen" type="button" class="text-button">Privacy & data</button></footer>
+  </div>
+
+  <div class="modal-layer hidden" id="settingsModal" role="presentation">
+    <section class="modal-card settings-modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <div class="modal-header"><div><div class="eyebrow muted-eyebrow">MAKE IT YOURS</div><h2 id="settingsTitle">Settings</h2></div><button class="icon-button modal-close" data-close="settingsModal" type="button" aria-label="Close settings"><svg><use href="#i-close"/></svg></button></div>
+      <div class="settings-scroll">
+        <div class="setting-section">
+          <div class="setting-section-title"><span class="setting-number">01</span><div><strong>Connect your AI partner</strong><small>Gemini API key</small></div></div>
+          <label class="field-label" for="apiKeyInput">Your API key</label>
+          <div class="key-field"><input id="apiKeyInput" type="password" placeholder="Paste your Gemini API key" autocomplete="off" spellcheck="false"><button id="toggleKeyVisibility" type="button" class="text-button">Show</button></div>
+          <div class="key-help"><span class="help-dot">i</span><span>Get a key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a>. Free access and quotas depend on Google account, region and model eligibility.</span></div>
+          <label class="field-label" for="modelSelect">Gemini model</label>
+          <select id="modelSelect" class="select-control full-width"><option value="gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite · recommended</option><option value="gemini-2.5-flash">Gemini 2.5 Flash · alternative</option></select>
+          <p class="field-hint" id="serverKeyHint">The key is saved in this browser and sent through this app to Google when you practise. Don’t use a shared device or share a public app URL.</p>
+          <div class="settings-actions"><button id="saveSettings" class="button button-primary" type="button">Save settings</button><button id="testConnection" class="button button-outline" type="button">Test connection</button></div>
+          <p class="settings-feedback" id="settingsFeedback" aria-live="polite"></p>
+        </div>
+        <div class="settings-section">
+          <div class="setting-section-title"><span class="setting-number">02</span><div><strong>Listening & speaking</strong><small>Set your preferred English voice</small></div></div>
+          <label class="field-label" for="accentSelect">English accent</label>
+          <select id="accentSelect" class="select-control full-width"><option value="en-IN">English · India</option><option value="en-US">English · United States</option><option value="en-GB">English · United Kingdom</option></select>
+          <label class="field-label range-label" for="speedRange"><span>Speaking speed</span><span id="speedValue">0.9×</span></label>
+          <input id="speedRange" class="range-control" type="range" min="0.7" max="1.2" step="0.05" value="0.9">
+          <label class="check-row"><input id="autoSpeakToggle" type="checkbox" checked><span><strong>Read AI replies aloud</strong><small>Uses a voice available on your device</small></span></label>
+        </div>
+        <div class="settings-section privacy-section">
+          <div class="setting-section-title"><span class="setting-number">03</span><div><strong>Privacy, in plain English</strong><small>Know what leaves your phone</small></div></div>
+          <ul class="privacy-list">
+            <li><span>✓</span><span>Your API key, settings and practice summaries stay in this browser’s storage.</span></li>
+            <li><span>✓</span><span>Your messages are sent to Google Gemini to generate corrections and replies. With pronunciation on, the audio clip is sent too; SpeakUp doesn’t save audio.</span></li>
+            <li><span>!</span><span>When available, speech recognition is provided by your browser or device and may process audio under its own privacy terms.</span></li>
+            <li><span>!</span><span>Google’s free-tier data terms may allow submitted content to be used to improve products. Avoid sharing passwords, health details or other sensitive information.</span></li>
+          </ul>
+          <div class="data-actions"><button id="exportData" class="text-button" type="button">Export my practice data</button><button id="clearData" class="text-button danger-text" type="button">Clear saved data</button></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-layer hidden" id="historyModal" role="presentation">
+    <section class="modal-card compact-modal" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
+      <div class="modal-header"><div><div class="eyebrow muted-eyebrow">YOUR PRACTICE JOURNEY</div><h2 id="historyTitle">Practice history</h2></div><button class="icon-button modal-close" data-close="historyModal" type="button" aria-label="Close history"><svg><use href="#i-close"/></svg></button></div>
+      <div class="history-list" id="historyList"></div>
+    </section>
+  </div>
+
+  <div class="modal-layer hidden" id="wordsModal" role="presentation">
+    <section class="modal-card compact-modal" role="dialog" aria-modal="true" aria-labelledby="wordsTitle">
+      <div class="modal-header"><div><div class="eyebrow muted-eyebrow">A LITTLE PRACTICE GOES A LONG WAY</div><h2 id="wordsTitle">My tricky words</h2></div><button class="icon-button modal-close" data-close="wordsModal" type="button" aria-label="Close tricky words"><svg><use href="#i-close"/></svg></button></div>
+      <p class="modal-intro">Words you’ve saved from pronunciation feedback. This is a gentle guide, not a formal pronunciation score.</p>
+      <div class="tricky-words-list" id="trickyWordsList"></div>
+    </section>
+  </div>
+
+  <div class="modal-layer hidden" id="privacyModal" role="presentation">
+    <section class="modal-card compact-modal" role="dialog" aria-modal="true" aria-labelledby="privacyTitle">
+      <div class="modal-header"><div><div class="eyebrow muted-eyebrow">A QUICK PRIVACY CHECK</div><h2 id="privacyTitle">Your data, your call</h2></div><button class="icon-button modal-close" data-close="privacyModal" type="button" aria-label="Close privacy"><svg><use href="#i-close"/></svg></button></div>
+      <div class="privacy-modal-copy"><p>SpeakUp sends your chat text to Google Gemini to get AI replies and English corrections. If you turn pronunciation feedback on, the app also sends the short audio clip from that turn for approximate guidance.</p><p>Practice notes and summaries are saved in this browser only. Recordings are used for that AI request and are not saved by SpeakUp. Google’s free-tier terms may allow submitted content to be used to improve products, so don’t practise with private or sensitive details.</p><p>Your API key is stored in this browser and passed through the app’s server to Google. Keep the app and device private; don’t share a public link if you add a server-side key.</p></div>
+        <button class="button button-primary modal-done" data-close="privacyModal" type="button">Got it</button>
+    </section>
+  </div>
+
+  <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
