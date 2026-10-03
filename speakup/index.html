@@ -129,6 +129,7 @@
           <div class="conversation" id="conversation" role="log" aria-live="polite" aria-relevant="additions text"></div>
           <div class="typing-indicator hidden" id="typingIndicator" aria-live="polite"><span class="typing-avatar">S</span><span class="typing-dots"><i></i><i></i><i></i></span><span class="typing-label">Thinking of a helpful reply…</span></div>
           <div class="recording-status hidden" id="recordingStatus" aria-live="assertive"><span class="recording-pulse"></span><span id="recordingText">Listening… tap the mic again when you’re done</span><span class="recording-timer" id="recordingTimer">0:00</span></div>
+          <div class="pending-audio-note hidden" id="pendingAudioNote" aria-live="polite"><span class="pending-audio-indicator">●</span><span>Voice clip ready · review your transcript, then tap Send</span><button id="discardAudio" type="button">Remove clip</button></div>
           <form class="composer" id="messageForm">
             <button class="mic-button" id="micButton" type="button" aria-label="Start speaking" title="Speak your reply"><svg><use href="#i-mic"/></svg><span class="mic-ripple"></span></button>
             <label class="composer-field" for="messageInput"><span class="sr-only">Your reply</span><textarea id="messageInput" rows="1" placeholder="Type your reply, or tap the microphone…" maxlength="2500" autocomplete="off"></textarea><span class="composer-hint" id="composerHint">Enter to send · Shift + Enter for a new line</span></label>

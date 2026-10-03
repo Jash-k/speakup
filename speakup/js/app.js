@@ -53,6 +53,10 @@ const state = {
   sessionEndAt: 0,
   inFlight: false,
   recording: null,
+  pendingAudio: null,
+  voiceDraftPending: false,
+  voiceOriginalTranscript: '',
+  voiceTranscriptEdited: false,
   serverKeyConfigured: false,
   histories: readJSON(STORE.sessions, []),
   trickyWords: readJSON(STORE.words, []),
@@ -70,7 +74,7 @@ const dom = {
   homeLevel: $('#homeLevel'), pronHome: $('#pronunciationHome'), pronSession: $('#pronunciationSession'),
   pronHomeLabel: $('#pronHomeLabel'), pronSessionLabel: $('#pronSessionLabel'), pronSessionNote: $('#pronSessionNote'),
   sessionPill: $('#sessionCategoryPill'), sessionTitle: $('#sessionTitle'), sessionSubtitle: $('#sessionSubtitle'),
-  conversation: $('#conversation'), typing: $('#typingIndicator'), recordingStatus: $('#recordingStatus'), recordingText: $('#recordingText'), recordingTimer: $('#recordingTimer'),
+  conversation: $('#conversation'), typing: $('#typingIndicator'), recordingStatus: $('#recordingStatus'), recordingText: $('#recordingText'), recordingTimer: $('#recordingTimer'), pendingAudioNote: $('#pendingAudioNote'),
   messageForm: $('#messageForm'), messageInput: $('#messageInput'), micButton: $('#micButton'), sendButton: $('#sendButton'), turnCounter: $('#turnCounter'),
   speechSupportNote: $('#speechSupportNote'), composerHint: $('#composerHint'), settingsModal: $('#settingsModal'), historyModal: $('#historyModal'), wordsModal: $('#wordsModal'), privacyModal: $('#privacyModal'),
   keyInput: $('#apiKeyInput'), modelSelect: $('#modelSelect'), accentSelect: $('#accentSelect'), speedRange: $('#speedRange'), speedValue: $('#speedValue'), autoSpeak: $('#autoSpeakToggle'),
@@ -173,6 +177,10 @@ function setPronunciation(value, askConsent = true) {
     else state.settings.audioConsent = true;
   }
   state.settings.pronunciation = Boolean(value);
+  if (!state.settings.pronunciation && state.pendingAudio) {
+    state.pendingAudio = null;
+    updatePendingAudioUI();
+  }
   persistSettings();
   updatePronunciationUI();
 }
@@ -183,6 +191,9 @@ function updatePronunciationUI() {
   dom.pronHomeLabel.textContent = enabled ? 'On' : 'Off';
   dom.pronSessionLabel.textContent = enabled ? 'On' : 'Off';
   dom.pronSessionNote.textContent = enabled ? 'On · speak with your mic to get approximate feedback' : 'Off · switch on to get voice feedback';
+}
+function updatePendingAudioUI() {
+  dom.pendingAudioNote.classList.toggle('hidden', !state.pendingAudio);
 }
 function updateConnectionUI() {
   const connected = hasAPIKey();
@@ -250,6 +261,11 @@ function startSession(scenario) {
   if (!scenario) return;
   state.currentScenario = scenario;
   state.turns = [];
+  state.pendingAudio = null;
+  state.voiceDraftPending = false;
+  state.voiceOriginalTranscript = '';
+  state.voiceTranscriptEdited = false;
+  updatePendingAudioUI();
   state.sessionStartedAt = Date.now();
   state.sessionEndAt = 0;
   state.inFlight = false;
@@ -386,8 +402,8 @@ function appendFeedback(result, turnIndex, hadAudio) {
   }
   scrollConversation();
 }
-function normalizeResult(parsed, typedText, hadAudio) {
-  const transcript = String(parsed?.transcript || typedText || '').trim();
+function normalizeResult(parsed, typedText, hadAudio, transcriptEdited = false) {
+  const transcript = String(transcriptEdited && typedText ? typedText : (parsed?.transcript || typedText || '')).trim();
   const reply = String(parsed?.reply || 'Thanks for sharing that. Could you tell me a little more?').trim();
   const corrections = Array.isArray(parsed?.corrections)
     ? parsed.corrections.filter((item) => item && item.improved).map((item) => ({
@@ -406,10 +422,10 @@ function normalizeResult(parsed, typedText, hadAudio) {
   };
   return { transcript, reply, corrections, pronunciation };
 }
-function buildSystemPrompt(hadAudio) {
+function buildSystemPrompt(hadAudio, transcriptEdited = false) {
   const scenario = state.currentScenario || {};
   const level = LEVELS[state.settings.level] || LEVELS.intermediate;
-  let prompt = `You are SpeakUp, a warm, practical English conversation partner and communication coach. Role-play instructions: ${scenario.role || 'Have a friendly everyday conversation.'}\n\nLearner level: ${level.prompt}\n\nBehavior: Reply naturally to what the learner said in 1–3 short sentences, then ask at most one useful follow-up question. Keep the conversation moving; do not give a lecture. Be encouraging, never shame or mock. Treat Indian English and other English varieties respectfully; do not label an accent as a mistake.\n\nCorrections: Review the learner's whole turn. Give a separate correction item for each sentence that needs a meaningful grammar, word-choice or naturalness improvement. In each item, put the learner's full sentence in "sentence", a natural standard-English alternative in "improved", and a brief, kind explanation in "why". Do not invent mistakes or over-correct valid conversational English. If there are no useful corrections, return an empty array. Keep explanations easy to understand.\n\nTranscript: ${hadAudio ? 'Listen to the attached audio. Return the words actually spoken in "transcript". If a browser transcript is included, treat it as a helpful draft and correct obvious recognition mistakes using the audio.' : 'There is no audio. Return the learner text unchanged in "transcript".'}\n\nPronunciation: ${hadAudio ? 'Give a gentle, approximate 1–10 estimate of how understandable the spoken English sounded, based only on this short clip. This is not a formal or phoneme-level test. Mention only up to three words that were genuinely difficult to understand; use a simple respelling in "phonetic" (not IPA) and give one practical sound or stress hint. Respect the learner’s accent.' : 'No audio is attached. Set score to 0, words to an empty array, and use an empty tip.'}\n\nOutput only a valid JSON object matching the response schema. Do not include Markdown fences or extra text.`;
+  let prompt = `You are SpeakUp, a warm, practical English conversation partner and communication coach. Role-play instructions: ${scenario.role || 'Have a friendly everyday conversation.'}\n\nLearner level: ${level.prompt}\n\nBehavior: Reply naturally to what the learner said in 1–3 short sentences, then ask at most one useful follow-up question. Keep the conversation moving; do not give a lecture. Be encouraging, never shame or mock. Treat Indian English and other English varieties respectfully; do not label an accent as a mistake.\n\nCorrections: Review the learner's whole turn. Give a separate correction item for each sentence that needs a meaningful grammar, word-choice or naturalness improvement. In each item, put the learner's full sentence in "sentence", a natural standard-English alternative in "improved", and a brief, kind explanation in "why". Do not invent mistakes or over-correct valid conversational English. If there are no useful corrections, return an empty array. Keep explanations easy to understand.\n\nTranscript: ${hadAudio && transcriptEdited ? 'The learner reviewed and edited the on-screen transcript. Treat the supplied text as authoritative, return it unchanged in "transcript", and base sentence corrections on that text. Use the audio only for approximate pronunciation feedback; do not replace the learner’s edits.' : hadAudio ? 'Listen to the attached audio. Return the words actually spoken in "transcript". If the supplied browser transcript has obvious recognition mistakes, correct them using the audio.' : 'There is no audio. Return the learner text unchanged in "transcript".'}\n\nPronunciation: ${hadAudio ? 'Give a gentle, approximate 1–10 estimate of how understandable the spoken English sounded, based only on this short clip. This is not a formal or phoneme-level test. Mention only up to three words that were genuinely difficult to understand; use a simple respelling in "phonetic" (not IPA) and give one practical sound or stress hint. Respect the learner’s accent.' : 'No audio is attached. Set score to 0, words to an empty array, and use an empty tip.'}\n\nOutput only a valid JSON object matching the response schema. Do not include Markdown fences or extra text.`;
   if (state.drillWord) {
     prompt += `\n\nFocused pronunciation drill: The target is the word “${state.drillWord}”. Keep your response focused on helping the learner repeat it, then use it in a short sentence. If audio is included, give approximate feedback specifically on this target. Avoid unrelated grammar corrections unless needed for meaning.`;
   }
@@ -461,11 +477,16 @@ function getHistoryContents() {
   }
   return contents;
 }
-async function requestGemini(text, audioBlob = null) {
+async function requestGemini(text, audioBlob = null, transcriptEdited = false) {
   const key = state.settings.key || '';
   const parts = [];
   if (audioBlob) {
-    parts.push({ text: text ? `The phone speech recognizer tentatively heard: “${text}”. Listen to the audio and use it to correct any recognition errors.` : 'Please transcribe the spoken English in the attached audio, then respond naturally to it.' });
+    const audioNote = text
+      ? (transcriptEdited
+        ? `The learner reviewed this transcript: “${text}”. Use that exact wording for corrections; use the audio only for pronunciation feedback.`
+        : `The phone speech recognizer tentatively heard: “${text}”. Listen to the audio and correct obvious recognition errors.`)
+      : 'Please transcribe the spoken English in the attached audio, then respond naturally to it.';
+    parts.push({ text: audioNote });
     parts.push({ inlineData: { mimeType: (audioBlob.type || 'audio/webm').split(';')[0], data: await blobToBase64(audioBlob) } });
   } else {
     parts.push({ text: text || 'Hello!' });
@@ -473,7 +494,7 @@ async function requestGemini(text, audioBlob = null) {
   const contents = getHistoryContents();
   contents.push({ role: 'user', parts });
   const body = {
-    systemInstruction: { parts: [{ text: buildSystemPrompt(Boolean(audioBlob)) }] },
+    systemInstruction: { parts: [{ text: buildSystemPrompt(Boolean(audioBlob), transcriptEdited && Boolean(text)) }] },
     contents,
     generationConfig: { temperature: 0.72, maxOutputTokens: 850, responseMimeType: 'application/json', responseSchema },
   };
@@ -498,7 +519,7 @@ async function requestGemini(text, audioBlob = null) {
   let parsed;
   try { parsed = JSON.parse(rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')); }
   catch { parsed = { transcript: text, reply: rawText, corrections: [], pronunciation: { score: 0, words: [], tip: '' } }; }
-  return normalizeResult(parsed, text, Boolean(audioBlob));
+  return normalizeResult(parsed, text, Boolean(audioBlob), transcriptEdited && Boolean(text));
 }
 async function sendTurn(rawText, audioBlob = null) {
   if (state.inFlight || !state.currentScenario) return;
@@ -506,18 +527,23 @@ async function sendTurn(rawText, audioBlob = null) {
   if (!text && !audioBlob) { toast('Say something or type a reply to begin.', ''); return; }
   if (!hasAPIKey()) {
     if (text) dom.messageInput.value = text;
-    addSystemNote('Add your Gemini API key in Settings to get live AI replies. This draft is still here.');
+    if (audioBlob) state.pendingAudio = audioBlob;
+    updatePendingAudioUI();
+    addSystemNote('Add your Gemini API key in Settings to get live AI replies. Your transcript and voice clip are still here.');
     openSettingsForKey();
     return;
   }
   state.settings.level = dom.homeLevel.value || state.settings.level;
   persistSettings();
   const bubble = appendUserMessage(text, Boolean(audioBlob));
+  const transcriptEdited = Boolean(state.voiceDraftPending && state.voiceTranscriptEdited);
+  state.pendingAudio = null;
+  updatePendingAudioUI();
   dom.messageInput.value = '';
   autoGrowInput();
   setBusy(true);
   try {
-    const result = await requestGemini(text, audioBlob);
+    const result = await requestGemini(text, audioBlob, transcriptEdited);
     const transcript = result.transcript || text || '🎤 Voice reply';
     bubble.bubble.textContent = transcript;
     const message = appendAssistantMessage(result.reply);
@@ -530,6 +556,9 @@ async function sendTurn(rawText, audioBlob = null) {
       hadAudio: Boolean(audioBlob),
       at: Date.now(),
     });
+    state.voiceDraftPending = false;
+    state.voiceOriginalTranscript = '';
+    state.voiceTranscriptEdited = false;
     updateTurnCounter();
     if (state.settings.autoSpeak) speak(result.reply);
     bubble.row.setAttribute('aria-label', `You said: ${transcript}`);
@@ -538,10 +567,13 @@ async function sendTurn(rawText, audioBlob = null) {
     bubble.row.remove();
     addSystemNote(error.message || 'Could not reach Gemini. Check your connection and Settings, then try again.', 'error-note');
     if (text) dom.messageInput.value = text;
+    if (audioBlob) state.pendingAudio = audioBlob;
+    updatePendingAudioUI();
     toast(error.message || 'Could not reach Gemini. Try again.', 'error');
     if (/API key|key was not accepted/i.test(error.message || '')) showSettings();
   } finally {
     setBusy(false);
+    if (!state.voiceDraftPending) updateSpeechSupportNote();
     dom.messageInput.focus({ preventScroll: true });
     scrollConversation();
   }
@@ -577,7 +609,7 @@ async function testConnection() {
 
 function updateSpeechSupportNote() {
   if (SpeechRecognition) {
-    dom.speechSupportNote.textContent = 'Mic: tap once to speak, tap again to send.';
+    dom.speechSupportNote.textContent = 'Mic: tap to speak, tap again to review; Send when ready.';
     dom.composerHint.textContent = 'Enter to send · Shift + Enter for a new line';
   } else if (state.settings.pronunciation && navigator.mediaDevices?.getUserMedia && window.MediaRecorder) {
     dom.speechSupportNote.textContent = 'Mic audio can be transcribed by Gemini while pronunciation is on.';
@@ -587,13 +619,64 @@ function updateSpeechSupportNote() {
 }
 function setRecordingUI(on) {
   dom.micButton.classList.toggle('recording', on);
-  dom.micButton.setAttribute('aria-label', on ? 'Stop speaking and send' : 'Start speaking');
+  dom.micButton.setAttribute('aria-label', on ? 'Stop speaking' : 'Start speaking');
   dom.micButton.title = on ? 'Tap to finish speaking' : 'Speak your reply';
   dom.recordingStatus.classList.toggle('hidden', !on);
   updateSpeechSupportNote();
 }
+function mergeSpeechSegments(parts) {
+  const normal = (word) => word.toLocaleLowerCase().replace(/[^\p{L}\p{N}’']/gu, '');
+  const collapseRepeated = (words) => {
+    const clean = [];
+    for (const word of words) {
+      clean.push(word);
+      // Android speech services can emit successive partial snapshots as if each
+      // were new speech. Collapse immediately repeated words and short phrases.
+      let changed = true;
+      while (changed) {
+        changed = false;
+        const max = Math.min(8, Math.floor(clean.length / 2));
+        for (let n = max; n >= 1; n--) {
+          let same = true;
+          for (let i = 0; i < n; i++) {
+            if (normal(clean[clean.length - 2 * n + i]) !== normal(clean[clean.length - n + i])) { same = false; break; }
+          }
+          if (same) { clean.splice(clean.length - n, n); changed = true; break; }
+        }
+      }
+    }
+    return clean;
+  };
+  const output = [];
+  for (const part of parts) {
+    const tokens = collapseRepeated(String(part || '').trim().split(/\s+/).filter(Boolean));
+    if (!tokens.length) continue;
+    let overlap = 0;
+    const max = Math.min(12, output.length, tokens.length);
+    for (let n = max; n > 0; n--) {
+      let same = true;
+      for (let i = 0; i < n; i++) {
+        if (normal(output[output.length - n + i]) !== normal(tokens[i])) { same = false; break; }
+      }
+      if (same) { overlap = n; break; }
+    }
+    output.push(...tokens.slice(overlap));
+  }
+  return collapseRepeated(output).join(' ');
+}
 async function startVoiceCapture() {
   if (state.inFlight || state.recording) return;
+  if (state.voiceDraftPending && (state.pendingAudio || dom.messageInput.value.trim())) {
+    const replace = window.confirm('Start a new recording? This will replace the unsent voice transcript and clip. Tap Send first if you want to keep them.');
+    if (!replace) return;
+    state.pendingAudio = null;
+    state.voiceDraftPending = false;
+    state.voiceOriginalTranscript = '';
+    state.voiceTranscriptEdited = false;
+    dom.messageInput.value = '';
+    autoGrowInput();
+    updatePendingAudioUI();
+  }
   if (!SpeechRecognition && !(state.settings.pronunciation && navigator.mediaDevices?.getUserMedia && window.MediaRecorder)) {
     toast('Speech input is not available here. Type your reply, or turn on pronunciation feedback and use a secure site.', 'error');
     dom.messageInput.focus();
@@ -605,7 +688,7 @@ async function startVoiceCapture() {
   }
 
   const rec = {
-    recognition: null, stream: null, recorder: null, chunks: [], audioBlob: null,
+    recognition: null, stream: null, recorder: null, chunks: [], audioBlob: null, segments: [],
     transcript: '', interim: '', recognitionDone: !SpeechRecognition, recorderDone: !state.settings.pronunciation,
     manual: false, finalizing: false, startedAt: Date.now(), timer: 0, previousText: dom.messageInput.value,
   };
@@ -656,16 +739,17 @@ async function startVoiceCapture() {
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
       recognition.onresult = (event) => {
-        let finalText = '';
-        let interimText = '';
-        for (let i = 0; i < event.results.length; i++) {
+        // SpeechRecognition keeps prior results in the list. Only replace the indices
+        // that changed; joining every interim snapshot can repeat the same phrase.
+        const firstChanged = Number.isInteger(event.resultIndex) ? event.resultIndex : 0;
+        for (let i = firstChanged; i < event.results.length; i++) {
           const result = event.results[i];
-          if (result.isFinal) finalText += `${result[0]?.transcript || ''} `;
-          else interimText += `${result[0]?.transcript || ''} `;
+          rec.segments[i] = { text: result?.[0]?.transcript || '', final: Boolean(result?.isFinal) };
         }
-        rec.transcript = finalText.trim();
-        rec.interim = interimText.trim();
-        const preview = [rec.transcript, rec.interim].filter(Boolean).join(' ').trim();
+        rec.segments.length = event.results.length;
+        rec.transcript = mergeSpeechSegments(rec.segments.filter((part) => part?.final).map((part) => part.text));
+        rec.interim = mergeSpeechSegments(rec.segments.filter((part) => part && !part.final).map((part) => part.text));
+        const preview = mergeSpeechSegments([rec.transcript, rec.interim]);
         if (preview) { dom.messageInput.value = preview; autoGrowInput(); }
       };
       recognition.onerror = (event) => {
@@ -705,7 +789,7 @@ async function startVoiceCapture() {
     const elapsed = Math.floor((Date.now() - rec.startedAt) / 1000);
     dom.recordingTimer.textContent = formatDuration(elapsed);
     if (elapsed >= 55) {
-      dom.recordingText.textContent = 'That’s a good practice turn. Sending it now…';
+      dom.recordingText.textContent = 'That’s a good practice turn. Finishing the recording…';
       stopVoiceCapture(true);
     }
   }, 250);
@@ -746,14 +830,30 @@ function tryFinishVoiceCapture(rec) {
     toast('I didn’t catch anything. Try again, or type your reply.', '');
     return;
   }
-  if (audio && finalText) dom.messageInput.value = '';
-  if (!hasAPIKey() && audio && !finalText) {
-    addSystemNote('I recorded your voice, but a Gemini key is needed to transcribe it. Add your key in Settings, then try again.');
+
+  // Let the learner review and correct speech recognition before anything is sent.
+  dom.messageInput.value = finalText;
+  autoGrowInput();
+  state.pendingAudio = audio;
+  state.voiceDraftPending = true;
+  state.voiceOriginalTranscript = finalText;
+  state.voiceTranscriptEdited = false;
+  updatePendingAudioUI();
+  dom.speechSupportNote.textContent = audio
+    ? 'Voice clip ready · edit the transcript, then tap Send.'
+    : 'Transcript ready · edit it if needed, then tap Send.';
+  dom.composerHint.textContent = 'Review your transcript, then tap Send.';
+
+  if (!hasAPIKey()) {
+    addSystemNote(audio
+      ? 'Your transcript and voice clip are ready. Add a Gemini key in Settings, then review and tap Send.'
+      : 'Your transcript is ready. Add a Gemini key in Settings, then review and tap Send.');
+    toast('Transcript ready. You can review it while connecting Gemini.', '');
     openSettingsForKey();
     return;
   }
-  if (!hasAPIKey() && finalText) dom.messageInput.value = finalText;
-  sendTurn(finalText, audio);
+  toast(audio ? 'Voice clip ready. Review the transcript, then tap Send.' : 'Transcript ready. Review it, then tap Send.', 'success');
+  dom.messageInput.focus({ preventScroll: true });
 }
 function autoGrowInput() {
   const input = dom.messageInput;
@@ -875,6 +975,13 @@ function saveSummary(summary) {
 function finishSession() {
   if (state.recording) { stopVoiceCapture(true); return; }
   if (state.inFlight) { toast('Wait for your AI reply before finishing this session.', ''); return; }
+  if (state.voiceDraftPending && (state.pendingAudio || dom.messageInput.value.trim())) {
+    const discard = window.confirm('You have an unsent voice transcript. Finish this session and discard it? Choose Cancel to review or send it first.');
+    if (!discard) return;
+    state.pendingAudio = null;
+    state.voiceDraftPending = false;
+    updatePendingAudioUI();
+  }
   if (!state.turns.length) {
     state.currentScenario = null; state.drillWord = ''; setScreen(dom.home); return;
   }
@@ -888,6 +995,13 @@ function finishSession() {
 }
 function leaveSession() {
   if (state.recording) { stopVoiceCapture(true); return; }
+  if (state.voiceDraftPending && (state.pendingAudio || dom.messageInput.value.trim())) {
+    const discard = window.confirm('Discard the unsent voice transcript and clip?');
+    if (!discard) return;
+    state.pendingAudio = null;
+    state.voiceDraftPending = false;
+    updatePendingAudioUI();
+  }
   if (state.turns.length) {
     const yes = window.confirm('Leave this session and save a summary?');
     if (yes) finishSession();
@@ -998,13 +1112,25 @@ function initEvents() {
   dom.messageForm.addEventListener('submit', (event) => {
     event.preventDefault();
     if (state.recording) { stopVoiceCapture(true); return; }
-    sendTurn(dom.messageInput.value);
+    const audio = state.pendingAudio;
+    state.pendingAudio = null;
+    updatePendingAudioUI();
+    sendTurn(dom.messageInput.value, audio);
   });
-  dom.messageInput.addEventListener('input', autoGrowInput);
+  dom.messageInput.addEventListener('input', () => {
+    autoGrowInput();
+    if (state.voiceDraftPending) state.voiceTranscriptEdited = dom.messageInput.value.trim() !== state.voiceOriginalTranscript.trim();
+  });
   dom.messageInput.addEventListener('keydown', (event) => {
     if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); dom.messageForm.requestSubmit(); }
   });
   dom.micButton.addEventListener('click', () => state.recording ? stopVoiceCapture(true) : startVoiceCapture());
+  $('#discardAudio').addEventListener('click', () => {
+    state.pendingAudio = null;
+    updatePendingAudioUI();
+    toast('Voice clip removed. The transcript is still in the text box.', '');
+    dom.speechSupportNote.textContent = 'Audio removed · you can still send the edited transcript.';
+  });
   $('#saveSettings').addEventListener('click', saveSettingsFromForm);
   $('#testConnection').addEventListener('click', testConnection);
   $('#toggleKeyVisibility').addEventListener('click', (event) => {

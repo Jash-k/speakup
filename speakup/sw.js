@@ -1,4 +1,4 @@
-const CACHE = 'speakup-shell-v1';
+const CACHE = 'speakup-shell-v2';
 const SHELL = [
   '/', '/index.html', '/styles.css', '/js/app.js', '/js/scenarios.js',
   '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png',
